@@ -40,7 +40,11 @@ jobs:
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
 
+      # enablement: true 가 없으면 저장소 Settings → Pages 를 사람이 먼저 켜둬야 하고,
+      # 그 전까지는 "Get Pages site failed ... Not Found" 로 실패한다.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
