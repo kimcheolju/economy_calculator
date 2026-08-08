@@ -1,0 +1,57 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 배포는 한 번에 하나만. 연속 푸시 시 오래된 빌드가 나중에 도착해 덮어쓰는 것을 막는다.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # 계산이 틀린 채로 배포되는 것이 이 프로젝트의 최악의 실패다 (design/07 §0).
+      # 검증을 통과하지 못하면 배포하지 않는다.
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test
+
+      # GitHub Pages 는 https://<user>.github.io/<repo>/ 하위 경로로 서빙한다.
+      # base 를 저장소 이름으로 맞추지 않으면 /assets/... 절대경로가 전부 404 가 된다.
+      - run: npm run build
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

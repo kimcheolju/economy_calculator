@@ -1,0 +1,292 @@
+@import 'tailwindcss';
+
+/* 수동 다크모드 토글 지원 (시스템 설정 + .dark 클래스) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ═══════════════════════════════════════════════════════════════════
+   디자인 토큰 — 단일 정의 지점
+   전체 규칙과 근거는 design/08-design-system.md 를 따른다.
+
+   팔레트는 dataviz 레퍼런스 인스턴스를 채택했다. 눈으로 고른 색이 아니라
+   검증기(scripts/validate_palette.js)로 통과시킨 값이며, 이 앱의 실제 표면
+   (라이트 #fcfcfb / 다크 #1a1a19)에 대해 재검증했다:
+     라이트 all-pairs — CVD ΔE 9.2 · 일반시야 ΔE 24.0 · PASS
+     다크   all-pairs — CVD ΔE 9.4 · 일반시야 ΔE 20.9 · PASS
+   라이트에서 series-3(aqua)만 대비 2.74:1 로 WARN 이다. 이 경고는 무시 대상이
+   아니라 "가시적 레이블 또는 표 뷰" 제공 의무를 지운다 — 범례·직접 레이블과
+   연도별 상세 표로 충족한다 (design/05-ui-ux.md §11).
+
+   색을 바꾸려면 반드시 검증기를 다시 돌린다. 임의로 고르지 않는다.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: light;
+
+  /* 평면 — 페이지 < 표면 < 융기 순으로 밝아진다 */
+  --plane: #f9f9f7;
+  --surface: #fcfcfb;
+  --surface-sunken: #f2f1ed;
+
+  /* 잉크 — 위계는 크기가 아니라 이 3단계가 만든다 */
+  --ink: #0b0b0b;
+  --ink-secondary: #52514e;
+  --ink-muted: #898781;
+
+  /* 괘선 — 보더는 최소한으로, 구획은 여백이 나눈다 */
+  --rule: #e1e0d9;
+  --rule-strong: #c3c2b7;
+  --ring: rgb(11 11 11 / 0.1);
+
+  /* 액센트 1색 — 이 앱에서 파랑은 "액센트"이지 "정보"가 아니다 */
+  --accent: #2a78d6;
+  --accent-hover: #256abf;
+  --accent-ink: #184f95;
+  --accent-wash: #eaf1fc;
+  --on-accent: #ffffff;
+
+  /* 시리즈 — 고정 순서. 절대 순환 배정하지 않는다 */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+
+  /* 상태 — 시리즈 색으로 재사용 금지. 항상 아이콘+레이블과 함께 */
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+  --success-text: #006300;
+
+  /* 레이어 — 금융 도구에 드롭섀도는 거의 필요 없다. 팝오버만 예외 */
+  --shadow-raised: 0 1px 2px rgb(11 11 11 / 0.04);
+  --shadow-overlay:
+    0 12px 32px -8px rgb(11 11 11 / 0.14),
+    0 2px 6px rgb(11 11 11 / 0.06);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --plane: #0d0d0d;
+  --surface: #1a1a19;
+  --surface-sunken: #121211;
+
+  --ink: #ffffff;
+  --ink-secondary: #c3c2b7;
+  --ink-muted: #898781;
+
+  --rule: #2c2c2a;
+  --rule-strong: #383835;
+  --ring: rgb(255 255 255 / 0.1);
+
+  --accent: #3987e5;
+  --accent-hover: #5598e7;
+  --accent-ink: #86b6ef;
+  --accent-wash: #17253a;
+  --on-accent: #0b0b0b;
+
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+
+  --success-text: #0ca30c;
+
+  --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-overlay:
+    0 12px 32px -8px rgb(0 0 0 / 0.6),
+    0 2px 6px rgb(0 0 0 / 0.4);
+}
+
+/* Tailwind 유틸리티로 노출. inline 이라 .dark 재정의가 그대로 반영된다. */
+@theme inline {
+  --color-plane: var(--plane);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-wash: var(--accent-wash);
+  --color-on-accent: var(--on-accent);
+
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-series-3: var(--series-3);
+
+  --color-good: var(--good);
+  --color-warning: var(--warning);
+  --color-serious: var(--serious);
+  --color-critical: var(--critical);
+  --color-success-text: var(--success-text);
+
+  --shadow-raised: var(--shadow-raised);
+  --shadow-overlay: var(--shadow-overlay);
+}
+
+@theme {
+  /* 외부 폰트를 쓰지 않는다 (CLAUDE.md R-7). 시스템 산세 단일 */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+
+  /* 타이포 스케일 — 좁고 의도적으로. 임의 크기를 새로 만들지 않는다 */
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1rem;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.125rem;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.375rem;
+  --text-title: 1rem;
+  --text-title--line-height: 1.5rem;
+  --text-metric: 1.5rem;
+  --text-metric--line-height: 1.875rem;
+  --text-metric-lg: 2rem;
+  --text-metric-lg--line-height: 2.25rem;
+  --text-hero: clamp(2.25rem, 7vw, 3.25rem);
+  --text-hero--line-height: 1.05;
+
+  --radius-control: 0.375rem;
+  --radius-panel: 0.625rem;
+}
+
+/* ─── 기본 ─────────────────────────────────────────────────────────── */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--plane);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.375rem;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+}
+
+/* 접근성: 가시적 포커스 링을 커스텀 컴포넌트에도 예외 없이 적용 */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── 숫자 ─────────────────────────────────────────────────────────── */
+
+/*
+ * 세로로 정렬되어야 하는 숫자(표 열, 축 눈금)에만 tabular-nums 를 쓴다.
+ *
+ * 예외: 슬라이더를 드래그하는 동안 실시간으로 바뀌는 핵심 지표에도 적용한다.
+ * dataviz 기본 규칙은 히어로 숫자에 비례 숫자를 권하지만, 그 규칙은 정적인
+ * 숫자를 전제한다. 이 계산기의 히어로 값은 입력 조작 중 매 틱 갱신되므로
+ * 비례 숫자를 쓰면 자릿수가 흔들려 읽는 도중 시선이 튄다.
+ */
+.numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── 입력 ─────────────────────────────────────────────────────────── */
+
+/* 스피너 제거 — 직접 입력과 슬라이더를 함께 쓰므로 불필요 */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/*
+ * 슬라이더 — 브라우저 기본형은 플랫폼마다 두께와 색이 달라
+ * 디자인 언어가 거기서 끊긴다. 트랙·썸을 직접 그린다.
+ */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 1.25rem;
+  background: transparent;
+  cursor: pointer;
+}
+/*
+ * --range-fill 은 컴포넌트가 인라인으로 넣는다. 채워진 구간을 액센트로 칠하면
+ * 현재 값이 범위 안 어디쯤인지 썸 위치를 읽지 않고도 파악된다.
+ */
+input[type='range']::-webkit-slider-runnable-track {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--accent) 0 var(--range-fill, 0%),
+    var(--rule) var(--range-fill, 0%) 100%
+  );
+}
+input[type='range']::-moz-range-track {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--accent) 0 var(--range-fill, 0%),
+    var(--rule) var(--range-fill, 0%) 100%
+  );
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -0.3125rem;
+  height: 0.875rem;
+  width: 0.875rem;
+  border-radius: 999px;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--ring);
+  transition: transform 120ms ease;
+}
+input[type='range']::-moz-range-thumb {
+  height: 0.875rem;
+  width: 0.875rem;
+  border-radius: 999px;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--ring);
+}
+input[type='range']:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+/* ─── 표 ───────────────────────────────────────────────────────────── */
+
+/* 넓은 표는 자체 컨테이너 안에서만 가로 스크롤된다 */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
