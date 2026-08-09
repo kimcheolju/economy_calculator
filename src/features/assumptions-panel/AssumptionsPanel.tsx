@@ -1,6 +1,7 @@
 import type { Assumption, CalculationResult, Warning } from '@/calc/types'
 import { Alert, External, Info } from '@/components/display/Icon'
 import { Section, StatusBadge } from '@/components/display/Primitives'
+import { useFocusStore } from '@/store/focus'
 
 const GROUP_ORDER: Assumption['group'][] = ['수익률', '계산 규약', '적용 세제', '한계']
 
@@ -10,6 +11,7 @@ const GROUP_ORDER: Assumption['group'][] = ['수익률', '계산 규약', '적�
  * 항상 접근 가능해야 한다. 결과 옆에 가정이 없으면 미완성이다 (CLAUDE.md R-8).
  */
 export function AssumptionsPanel({ result }: { result: CalculationResult }) {
+  const assumptionsSignal = useFocusStore((s) => s.assumptionsSignal)
   const grouped = GROUP_ORDER.map((group) => ({
     group,
     items: result.assumptions.filter((a) => a.group === group),
@@ -19,6 +21,8 @@ export function AssumptionsPanel({ result }: { result: CalculationResult }) {
 
   return (
     <Section
+      id="assumptions"
+      openSignal={assumptionsSignal}
       title="사용된 가정 및 계산 근거"
       badge={
         needsVerification > 0

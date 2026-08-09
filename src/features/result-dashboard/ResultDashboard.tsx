@@ -14,6 +14,7 @@ import {
 } from '@/components/display/Primitives'
 import { formatKRW, formatPercent } from '@/lib/format'
 import { useCalculatorStore } from '@/store/calculator'
+import { useFocusStore } from '@/store/focus'
 import { useRequiredContribution } from '@/store/useResult'
 
 /**
@@ -164,6 +165,8 @@ export function ResultDashboard({ result }: { result: CalculationResult }) {
   /** 목표까지의 거리 (오늘 구매력 기준 월 금액). 양수면 부족, 음수면 여유 */
   const monthlyGap = input.retirement.targetMonthlySpendToday - monthlyNet.real
 
+  const revealAssumptions = useFocusStore((s) => s.revealAssumptions)
+
   return (
     <div className="space-y-3">
       {/* ① 은퇴 후 월 사용 가능액 — 화면에서 유일하게 히어로 크기를 쓰는 값 */}
@@ -172,18 +175,33 @@ export function ResultDashboard({ result }: { result: CalculationResult }) {
           label="지금 계획대로면 은퇴 후 매달 쓸 수 있는 돈"
           value={formatKRW(monthlyNet.real)}
           action={
-            <FormulaPopover title="월 사용 가능액 계산">
-              <p>인출 전략: {input.retirement.strategy}</p>
-              <p>세전 인출 {formatKRW(withdrawal.firstYearMonthlyGross)} / 월</p>
-              <p>+ 연금소득 {formatKRW((firstRow?.pensionIncome ?? 0) / 12)} / 월</p>
-              <p>− 세금 {formatKRW(monthlyTax)} / 월</p>
-              <p>− 건강보험료 {formatKRW(monthlyInsurance)} / 월</p>
-              <p>= 명목 {formatKRW(monthlyNet.nominal)} / 월</p>
-              <p className="pt-1">
-                오늘 구매력 환산: ÷ (1 + {formatPercent(input.returns.inflation)})^{years} ={' '}
-                {formatKRW(monthlyNet.real)}
-              </p>
-            </FormulaPopover>
+            <div className="flex items-center gap-1">
+              {/* CLAUDE.md §7: 결과 카드에서 가정 패널로 갈 수 있어야 한다 */}
+              <button
+                type="button"
+                onClick={revealAssumptions}
+                className="rounded px-1.5 py-0.5 text-caption text-accent-ink underline decoration-accent/30 underline-offset-2 transition-colors hover:decoration-accent"
+              >
+                가정 보기
+              </button>
+              <FormulaPopover title="월 사용 가능액 계산">
+                <p>인출 전략: {input.retirement.strategy}</p>
+                <p>세전 인출 {formatKRW(withdrawal.firstYearMonthlyGross)} / 월</p>
+                <p>+ 연금소득 {formatKRW((firstRow?.pensionIncome ?? 0) / 12)} / 월</p>
+                <p>− 세금 {formatKRW(monthlyTax)} / 월</p>
+                <p>− 건강보험료 {formatKRW(monthlyInsurance)} / 월</p>
+                <p>= 명목 {formatKRW(monthlyNet.nominal)} / 월</p>
+                <p className="pt-1">
+                  오늘 구매력 환산: ÷ (1 + {formatPercent(input.returns.inflation)})^{years} ={' '}
+                  {formatKRW(monthlyNet.real)}
+                </p>
+                {withdrawal.isaSettlementTax > 0 && (
+                  <p className="pt-1">
+                    별도: 은퇴 시점 ISA 정산세 {formatKRW(withdrawal.isaSettlementTax)} (일시금)
+                  </p>
+                )}
+              </FormulaPopover>
+            </div>
           }
           sub={
             /* 세금과 건보료를 명시적으로 보여주는 것이 이 계산기의 차별점이다 (05-ui-ux.md §3) */
@@ -213,12 +231,26 @@ export function ResultDashboard({ result }: { result: CalculationResult }) {
             </dl>
           }
         />
+
+        {/*
+          위 "세금"은 매달 인출에 붙는 세금이다. ISA 는 은퇴 시점에 한 번 정산되므로
+          그 세금이 월 항목에 잡히지 않는다 — 적지 않으면 "은퇴 후 세금이 0"으로 읽힌다.
+        */}
+        {withdrawal.isaSettlementTax > 0 && (
+          <p className="mt-3 border-t border-rule pt-2.5 text-caption text-ink-muted">
+            위 세금은 매달 인출에 붙는 금액입니다. 이와 별도로 은퇴 시점에{' '}
+            <strong className="font-semibold text-ink-secondary numeric">
+              ISA 정산세 {formatKRW(withdrawal.isaSettlementTax)}
+            </strong>
+            을 한 번 냅니다.
+          </p>
+        )}
       </section>
 
       {/* ②~④ 달성률 · 은퇴자산 · 원금/수익 — 테두리 대신 hairline 으로만 나눈다 */}
       <section className="grid divide-y divide-rule rounded-panel border border-rule bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         <div className="p-4">
-          <Gauge ratio={fire.achievementBySpend} label="경제적 자유 달성률" />
+          <Gauge ratio={fire.achievementBySpend} label="목표 달성률" />
           <p className="mt-2.5 text-caption text-ink-muted">
             목표 월 <span className="numeric">{formatKRW(input.retirement.targetMonthlySpendToday)}</span> 대비
           </p>
@@ -347,9 +379,16 @@ export function ResultDashboard({ result }: { result: CalculationResult }) {
           </div>
           <div>
             <dt className="text-caption text-ink-muted">은퇴 시점 연금 순소득</dt>
-            <dd className="mt-1 text-title font-semibold text-ink numeric">
-              월 {formatKRW(fire.annualPensionNetAtRetirement / 12)}
-            </dd>
+            {/* 0원을 지표 크기로 쓰면 "연금이 0원"이 아니라 "입력을 안 했다"는 사실이 가려진다 */}
+            {fire.annualPensionNetAtRetirement > 0 ? (
+              <dd className="mt-1 text-title font-semibold text-ink numeric">
+                월 {formatKRW(fire.annualPensionNetAtRetirement / 12)}
+              </dd>
+            ) : (
+              <dd className="mt-1 text-body text-ink-muted">
+                입력 없음 — 국민연금을 넣으면 필요 자산이 줄어듭니다
+              </dd>
+            )}
           </div>
         </dl>
         <p className="mt-4 border-t border-rule pt-3 text-caption text-ink-muted">

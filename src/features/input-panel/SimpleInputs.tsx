@@ -9,7 +9,7 @@
 import { useMemo, useState } from 'react'
 import { ACCOUNT_LABELS, ACCOUNT_TYPES, type AccountType } from '@/calc/types'
 import { normalizeReturns } from '@/calc/rates'
-import { NumberInput } from '@/components/inputs/Controls'
+import { NumberInput, Segmented } from '@/components/inputs/Controls'
 import { MoneyInput } from '@/components/inputs/MoneyInput'
 import { Button, Callout, Disclosure } from '@/components/display/Primitives'
 import { MONEY_PRESETS, SAVINGS_PRESETS } from '@/lib/defaults'
@@ -22,12 +22,33 @@ type Balances = Record<AccountType, number>
 
 const ZERO_BALANCES: Balances = { taxable: 0, isa: 0, pensionSavings: 0, irp: 0, dcRetirement: 0 }
 
+/**
+ * 인출률 프리셋 (design/05-ui-ux.md §2).
+ *
+ * 인출률은 결과를 33% 흔든다 — 3.0% 면 필요자산 17.8억, 4.0% 면 13.4억.
+ * 기본값으로 조용히 정해줄 수 있는 값이 아니라서 간단 모드에도 노출한다.
+ * 다만 "3.5%"라는 숫자는 비전문가에게 의미가 없으므로 결과로 이름 붙인다.
+ */
+const WITHDRAWAL_PRESETS = [
+  { key: 'safe', rate: 0.03, label: '적게 쓰기', hint: '오래 버팁니다' },
+  { key: 'balanced', rate: 0.035, label: '보통', hint: '기본값' },
+  { key: 'spend', rate: 0.04, label: '많이 쓰기', hint: '일찍 소진될 수 있습니다' },
+] as const
+
+type WithdrawalKey = (typeof WITHDRAWAL_PRESETS)[number]['key'] | 'custom'
+
+function withdrawalKeyOf(rate: number): WithdrawalKey {
+  const hit = WITHDRAWAL_PRESETS.find((p) => Math.abs(p.rate - rate) < 1e-9)
+  return hit ? hit.key : 'custom'
+}
+
 /** 간단 모드에서 보이는 필드 — 여기 없는 경로의 오류는 화면 밖에 있다 */
 const VISIBLE_ERROR_PATHS = new Set([
   'basic.currentAge',
   'basic.retirementAge',
   'accounts.monthlyContribution',
   'retirement.targetMonthlySpendToday',
+  'retirement.withdrawalRate',
 ])
 
 function sumBalances(balances: Readonly<Balances>): number {
@@ -64,6 +85,7 @@ export function SimpleInputs({ onSwitchToDetailed }: { onSwitchToDetailed: () =>
 
   const totalSavings = sumBalances(input.accounts.initialBalances)
   const normalized = useMemo(() => normalizeReturns(input.returns), [input.returns])
+  const withdrawalKey = withdrawalKeyOf(input.retirement.withdrawalRate)
 
   // 이미 세제 혜택 계좌에 잔액이 있으면 접어두지 않는다 — 접힌 채로 두면
   // 전액 일반계좌로 계산된 줄 모르고 세금이 과다 계산된 결과를 보게 된다.
@@ -168,14 +190,44 @@ export function SimpleInputs({ onSwitchToDetailed }: { onSwitchToDetailed: () =>
           </Callout>
         )}
 
+        <Segmented
+          label="은퇴 후 자산에서 매년 꺼내 쓸 비율"
+          value={withdrawalKey}
+          options={[
+            ...WITHDRAWAL_PRESETS.map((p) => ({
+              value: p.key as WithdrawalKey,
+              label: p.label,
+              help: `연 ${(p.rate * 100).toFixed(1)}% — ${p.hint}`,
+            })),
+            ...(withdrawalKey === 'custom'
+              ? [
+                  {
+                    value: 'custom' as WithdrawalKey,
+                    label: `직접 ${formatPercent(input.retirement.withdrawalRate, 1)}`,
+                    help: '자세히 모드에서 지정한 값입니다',
+                  },
+                ]
+              : []),
+          ]}
+          help="많이 꺼낼수록 매달 쓸 수 있는 돈은 늘지만 자산이 일찍 바닥납니다. 이 선택 하나로 필요한 은퇴자산이 30% 넘게 달라집니다."
+          hint={
+            withdrawalKey === 'custom'
+              ? undefined
+              : WITHDRAWAL_PRESETS.find((p) => p.key === withdrawalKey)?.hint
+          }
+          onChange={(key) => {
+            const preset = WITHDRAWAL_PRESETS.find((p) => p.key === key)
+            if (preset) patch({ retirement: { withdrawalRate: preset.rate } })
+          }}
+        />
+
         {/* R-8: 간단 모드에서도 숨긴 가정을 감추지 않는다 */}
         <Callout>
           <p>나머지는 아래 가정을 씁니다. 그대로 두어도 됩니다.</p>
           <p className="mt-1 numeric">
             수익률 연 {formatPercent(normalized.totalReturn)} · 물가 연{' '}
-            {formatPercent(input.returns.inflation)} · ETF 수수료 연 {formatPercent(input.returns.ter)} ·
-            은퇴 후 매년 {formatPercent(input.retirement.withdrawalRate)} 인출 ·{' '}
-            {input.basic.endAge}세까지 사용
+            {formatPercent(input.returns.inflation)} · ETF 수수료 연 {formatPercent(input.returns.ter)} ·{' '}
+            {input.basic.endAge}세까지 사용 · 국민연금 미반영
           </p>
           <Button className="mt-2" onClick={onSwitchToDetailed}>
             자세히 설정에서 바꾸기

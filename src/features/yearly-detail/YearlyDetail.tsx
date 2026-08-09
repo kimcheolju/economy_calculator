@@ -117,6 +117,15 @@ export function YearlyDetail({ result }: { result: CalculationResult }) {
         )}
       </div>
 
+      {/*
+        ISA 는 은퇴 시점에 해지·정산되어 일반계좌로 이관된다(settleAtRetirement).
+        이 사실을 적지 않으면 "ISA에 3억을 쌓았는데 인출 표엔 ISA가 0원"으로 보여
+        사용자가 버그로 오해한다.
+      */}
+      <p className="text-micro text-ink-muted">
+        ISA는 은퇴 시점에 해지·정산되어 일반계좌로 이관됩니다. 그래서 인출기 표에서는 ISA 잔액이 0이고, 그
+        금액이 일반계좌에서 빠져나갑니다. 정산 시 낸 세금은 결과 상단에 따로 표시됩니다.
+      </p>
       <p className="text-micro text-ink-muted">
         표의 금액은 축약 표기입니다. 정확한 원 단위 값은 CSV 내보내기로 확인하세요.
       </p>

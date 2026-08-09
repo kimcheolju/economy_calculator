@@ -12,8 +12,14 @@ import { useSolvers } from '@/store/useResult'
  */
 export function SolverPanel() {
   const [enabled, setEnabled] = useState(false)
-  const solvers = useSolvers(enabled)
+  const all = useSolvers(enabled)
   const patch = useCalculatorStore((s) => s.patch)
+
+  /*
+   * 필요 월 납입액은 결과 최상단의 "목표를 채우려면" 패널이 항상 보여준다.
+   * 여기서 또 보여주면 같은 답이 두 곳에 있어 어느 쪽이 최신인지 헷갈린다.
+   */
+  const solvers = all?.filter((s) => s.kind !== 'monthlyContribution') ?? null
 
   function apply(solver: SolverResult) {
     if (solver.value === null) return
@@ -50,8 +56,9 @@ export function SolverPanel() {
             역산 계산하기
           </Button>
           <p className="mt-2.5 text-caption text-ink-muted">
-            목표 생활비를 달성하기 위한 월 납입액 · 필요 수익률 · 가장 이른 은퇴 나이를 계산합니다. 전체 시뮬레이션을
-            수십 번 반복하므로 명시적으로 실행합니다.
+            납입액을 늘리는 것 말고 다른 방법을 계산합니다 — 필요 수익률과 가장 이른 은퇴 나이. 전체 시뮬레이션을
+            수십 번 반복하므로 명시적으로 실행합니다. (필요 월 납입액은 위 &ldquo;목표를 채우려면&rdquo;에 항상
+            표시됩니다)
           </p>
         </div>
       ) : solvers === null ? (

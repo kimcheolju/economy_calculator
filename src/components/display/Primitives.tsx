@@ -85,13 +85,22 @@ interface SectionProps {
   title: string
   badge?: string
   defaultOpen?: boolean
+  id?: string
+  /** 값이 바뀌면 섹션을 연다 — 다른 화면에서 "여기 보기"로 보낼 때 쓴다 */
+  openSignal?: number
   children: ReactNode
 }
 
-export function Section({ title, badge, defaultOpen = false, children }: SectionProps) {
+export function Section({ title, badge, defaultOpen = false, id, openSignal, children }: SectionProps) {
   const [open, setOpen] = useState(defaultOpen)
+
+  // 링크로 찾아온 사용자에게 접힌 섹션만 보여주면 도착했는지도 알 수 없다
+  useEffect(() => {
+    if (openSignal !== undefined && openSignal > 0) setOpen(true)
+  }, [openSignal])
+
   return (
-    <section className="rounded-panel border border-rule bg-surface">
+    <section id={id} className="scroll-mt-20 rounded-panel border border-rule bg-surface">
       <button
         type="button"
         onClick={() => setOpen(!open)}

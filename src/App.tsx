@@ -46,9 +46,10 @@ export default function App() {
         {result && (
           <div className="sticky top-14 z-20 -mx-4 mb-4 border-b border-rule bg-plane/90 px-4 py-2.5 backdrop-blur-md lg:hidden">
             <div className="flex items-baseline justify-between gap-3">
-              <p className="text-micro text-ink-muted">은퇴 후 월 사용액 · 오늘 가치</p>
+              {/* 히어로와 같은 말을 써야 한다 — 같은 값을 다르게 부르면 다른 지표로 읽힌다 */}
+              <p className="text-micro text-ink-muted">지금 계획대로면 매달 · 오늘 가치</p>
               <p className="text-micro text-ink-muted numeric">
-                달성 {(result.fire.achievementBySpend * 100).toFixed(0)}%
+                목표의 {(result.fire.achievementBySpend * 100).toFixed(0)}%
               </p>
             </div>
             <p
