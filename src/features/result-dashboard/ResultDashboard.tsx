@@ -1,7 +1,8 @@
 import type { CalculationResult } from '@/calc/types'
 import { netNominalReturn, realReturn } from '@/calc/rates'
+import { Alert } from '@/components/display/Icon'
 import {
-  Callout,
+  Button,
   FormulaPopover,
   Gauge,
   HeroMetric,
@@ -12,6 +13,8 @@ import {
   SplitBar,
 } from '@/components/display/Primitives'
 import { formatAchievement, formatKRW, formatPercent } from '@/lib/format'
+import { useCalculatorStore } from '@/store/calculator'
+import { useRequiredContribution } from '@/store/useResult'
 
 /**
  * 핵심 지표 (design/05-ui-ux.md §3)
@@ -23,6 +26,79 @@ import { formatAchievement, formatKRW, formatPercent } from '@/lib/format'
  * 2~4순위는 하나의 패널 안에서 hairline 으로만 나뉜 동등한 무게로 둔다.
  * 넷을 각각 테두리 있는 카드로 만들면 위계가 사라진다.
  */
+/**
+ * 목표 생활비를 채우는 데 필요한 월 납입액.
+ *
+ * 표시·적용 금액은 만원 단위로 **올림**한다. formatKRW 는 버림이라
+ * 2,449,417원을 "244만원"으로 보여주는데, 그 금액을 그대로 넣으면 목표에 미달한다.
+ */
+function RequiredContribution({
+  targetMonthlySpendToday,
+  currentMonthlyContribution,
+}: {
+  targetMonthlySpendToday: number
+  currentMonthlyContribution: number
+}) {
+  const required = useRequiredContribution()
+  const patch = useCalculatorStore((s) => s.patch)
+
+  if (!required) return null
+
+  const exact = required.value
+  const rounded = exact === null ? null : Math.ceil(exact / 10_000) * 10_000
+  const diff = rounded === null ? 0 : rounded - currentMonthlyContribution
+
+  return (
+    <section className="rounded-panel border border-rule bg-surface px-5 py-4">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+        <div className="min-w-0">
+          <Label>
+            목표 월 <span className="numeric">{formatKRW(targetMonthlySpendToday)}</span>을 채우려면
+          </Label>
+
+          {rounded === null ? (
+            <p className="mt-1.5 text-title font-semibold text-ink">계산 범위 안에서는 달성할 수 없습니다</p>
+          ) : rounded === 0 ? (
+            <p className="mt-1.5 text-title font-semibold text-ink">추가 납입 없이도 목표를 넘습니다</p>
+          ) : (
+            <>
+              <p className="mt-1.5 text-metric font-semibold text-ink numeric">
+                매달 {formatKRW(rounded)}
+              </p>
+              <p className="mt-1 text-caption text-ink-muted">
+                지금 <span className="numeric">{formatKRW(currentMonthlyContribution)}</span>
+                {diff > 0 && (
+                  <>
+                    {' · '}매달 <span className="numeric">{formatKRW(diff)}</span> 더 필요
+                  </>
+                )}
+                {diff < 0 && (
+                  <>
+                    {' · '}매달 <span className="numeric">{formatKRW(-diff)}</span> 여유
+                  </>
+                )}
+              </p>
+            </>
+          )}
+
+          {required.note && (
+            <p className="mt-1.5 flex items-start gap-1.5 text-caption text-ink-secondary">
+              <Alert className="mt-px size-3.5 shrink-0 text-warning" />
+              <span>{required.note}</span>
+            </p>
+          )}
+        </div>
+
+        {rounded !== null && rounded > 0 && rounded !== currentMonthlyContribution && (
+          <Button onClick={() => patch({ accounts: { monthlyContribution: rounded } })}>
+            이 금액으로 바꾸기
+          </Button>
+        )}
+      </div>
+    </section>
+  )
+}
+
 export function ResultDashboard({ result }: { result: CalculationResult }) {
   const { input, accumulation, withdrawal, fire, normalizedReturns } = result
   const monthlyNet = withdrawal.firstYearMonthlyNet
@@ -86,6 +162,16 @@ export function ResultDashboard({ result }: { result: CalculationResult }) {
         />
       </section>
 
+      {/*
+        "얼마를 받나"의 짝 — "그러려면 얼마를 넣어야 하나".
+        사용자가 목표 생활비를 입력했는데 결과가 달성률로만 답하면 질문이 절반만 해결된다.
+        역산 도구(접힌 섹션)에 있던 값을 여기로 끌어올린다 (design/05-ui-ux.md §3).
+      */}
+      <RequiredContribution
+        targetMonthlySpendToday={input.retirement.targetMonthlySpendToday}
+        currentMonthlyContribution={input.accounts.monthlyContribution}
+      />
+
       {/* ②~④ 달성률 · 은퇴자산 · 원금/수익 — 테두리 대신 hairline 으로만 나눈다 */}
       <section className="grid divide-y divide-rule rounded-panel border border-rule bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         <div className="p-4">
@@ -135,14 +221,6 @@ export function ResultDashboard({ result }: { result: CalculationResult }) {
           </div>
         </div>
       </section>
-
-      {/* 목표 미달 시 부족액 안내 */}
-      {fire.achievementBySpend < 1 && (
-        <Callout tone="warning">
-          목표 월 생활비의 <span className="numeric">{(fire.achievementBySpend * 100).toFixed(1)}%</span>를 충족합니다.
-          아래 <strong className="font-semibold">역산 도구</strong>에서 필요한 월 납입액을 확인할 수 있습니다.
-        </Callout>
-      )}
 
       {/* 주요 시점 스냅샷 (원안 30행) */}
       <Panel title="주요 시점 예상자산">

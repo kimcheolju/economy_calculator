@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { runFullSimulation } from '@/calc'
 import { runScenarios, type ScenarioResult } from '@/calc/scenario'
-import { runAllSolvers, type SolverResult } from '@/calc/solve'
+import { runAllSolvers, solveMonthlyContribution, type SolverResult } from '@/calc/solve'
 import type { CalculationResult } from '@/calc/types'
 import { resolveRuleSet, type TaxOverrideKey } from '@/data/tax'
 import type { TaxRuleSet } from '@/data/tax/types'
@@ -74,6 +74,28 @@ export function useScenarios(enabled: boolean): ScenarioResult[] | null {
       return null
     }
   }, [enabled, input, rules, errors])
+}
+
+/**
+ * 목표 달성에 필요한 월 납입액.
+ *
+ * 역산 솔버 전체(`useSolvers`)와 달리 이것만은 버튼 뒤에 두지 않는다 —
+ * "얼마를 받나"만큼이나 "얼마를 넣어야 하나"가 사용자의 1순위 질문이기 때문이다.
+ * 이분법 한 번은 실측 약 4ms(전체 시뮬레이션 1회 ≈ 1ms × 16회)라 매 입력마다 돌려도 된다.
+ */
+export function useRequiredContribution(): SolverResult | null {
+  const input = useCalculatorStore((s) => s.input)
+  const errors = useCalculatorStore((s) => s.validationErrors)
+  const rules = useRuleSet()
+
+  return useMemo(() => {
+    if (Object.keys(errors).length > 0) return null
+    try {
+      return solveMonthlyContribution(input, rules)
+    } catch {
+      return null
+    }
+  }, [input, rules, errors])
 }
 
 /** 역산 솔버 — 명시적으로 열었을 때만 계산한다 (전체 시뮬레이션을 수십 번 반복) */
