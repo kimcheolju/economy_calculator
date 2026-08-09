@@ -21,11 +21,12 @@ import { NumberInput, PriorityList, Segmented, Select, Toggle } from '@/componen
 import { MoneyInput } from '@/components/inputs/MoneyInput'
 import { RateInput } from '@/components/inputs/RateInput'
 import { External } from '@/components/display/Icon'
-import { FieldGroup, Section } from '@/components/display/Primitives'
+import { Disclosure, FieldGroup, Section } from '@/components/display/Primitives'
 import { DEFAULT_RATIONALE, MONEY_PRESETS } from '@/lib/defaults'
 import { formatKRW, formatPercent } from '@/lib/format'
 import { useCalculatorStore } from '@/store/calculator'
 import { useRuleSet } from '@/store/useResult'
+import { DebtFields } from './DebtFields'
 import { EventEditor } from './EventEditor'
 
 export function DetailedInputs({ result }: { result: CalculationResult | null }) {
@@ -289,33 +290,32 @@ export function DetailedInputs({ result }: { result: CalculationResult | null })
           onChange={(reinvestTaxCredit) => patch({ accounts: { reinvestTaxCredit } })}
         />
 
-        <details className="rounded-control border border-rule px-2.5 py-2">
-          <summary className="cursor-pointer text-caption font-medium text-ink-secondary transition-colors hover:text-ink">
-            계좌별 현재 자산 입력
-          </summary>
-          <div className="mt-3 space-y-3">
-            {ACCOUNT_TYPES.map((account) => (
-              <MoneyInput
-                key={account}
-                id={`initial-${account}`}
-                label={ACCOUNT_LABELS[account]}
-                value={input.accounts.initialBalances[account]}
-                onChange={(value) => patch({ accounts: { initialBalances: { [account]: value } } })}
-              />
-            ))}
-            <RateInput
-              id="retirementIncomeTaxRate"
-              label="퇴직소득 실효세율"
-              value={input.accounts.retirementIncomeTaxRate}
-              sliderMin={0}
-              sliderMax={20}
-              min={0}
-              max={45}
-              help="DC·퇴직금 인출 시 적용됩니다. 근속연수·규모에 따른 정확한 산식 대신 실효세율로 근사합니다."
-              onChange={(retirementIncomeTaxRate) => patch({ accounts: { retirementIncomeTaxRate } })}
+        <FieldGroup title="부채">
+          <DebtFields idPrefix="detailed" />
+        </FieldGroup>
+
+        <Disclosure title="계좌별 현재 자산 입력">
+          {ACCOUNT_TYPES.map((account) => (
+            <MoneyInput
+              key={account}
+              id={`initial-${account}`}
+              label={ACCOUNT_LABELS[account]}
+              value={input.accounts.initialBalances[account]}
+              onChange={(value) => patch({ accounts: { initialBalances: { [account]: value } } })}
             />
-          </div>
-        </details>
+          ))}
+          <RateInput
+            id="retirementIncomeTaxRate"
+            label="퇴직소득 실효세율"
+            value={input.accounts.retirementIncomeTaxRate}
+            sliderMin={0}
+            sliderMax={20}
+            min={0}
+            max={45}
+            help="DC·퇴직금 인출 시 적용됩니다. 근속연수·규모에 따른 정확한 산식 대신 실효세율로 근사합니다."
+            onChange={(retirementIncomeTaxRate) => patch({ accounts: { retirementIncomeTaxRate } })}
+          />
+        </Disclosure>
       </Section>
 
       <Section title="④ 은퇴 설정" defaultOpen>

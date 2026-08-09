@@ -22,7 +22,7 @@ const accountRecord = z.object({
 
 export const calculatorInputSchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
 
     basic: z.object({
       currentAge: z.number().int().min(19).max(80),
@@ -79,6 +79,13 @@ export const calculatorInputSchema = z
         mode: z.enum(['none', 'rateApprox', 'fixed']),
         fixedMonthlyAmount: z.number().min(0).max(10_000_000).optional(),
       }),
+    }),
+
+    debt: z.object({
+      principal: z.number().min(0).max(100_000_000_000),
+      annualRate: z.number().min(0).max(0.3),
+      monthlyPayment: z.number().min(0).max(500_000_000),
+      investFreedPayment: z.boolean(),
     }),
 
     events: z
@@ -311,10 +318,11 @@ type Migration = (old: Record<string, unknown>) => Record<string, unknown>
  * 저장된 링크가 깨지면 사용자가 계산 결과를 잃는다.
  */
 const MIGRATIONS: Record<number, Migration> = {
-  // 2: (v1) => ({ ...v1, schemaVersion: 2, newField: defaultValue }),
+  // v2: 부채 모델 추가. 기존 링크·저장값에는 debt 가 없으므로 "부채 없음"으로 채운다.
+  2: (v1) => ({ ...v1, schemaVersion: 2, debt: { ...DEFAULT_INPUT.debt } }),
 }
 
-export const CURRENT_SCHEMA_VERSION = 1
+export const CURRENT_SCHEMA_VERSION = 2
 
 function migrate(raw: unknown): unknown {
   if (typeof raw !== 'object' || raw === null) return raw

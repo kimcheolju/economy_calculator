@@ -8,7 +8,7 @@ import type { CalculatorInput } from '@/calc/types'
 import { DEFAULT_RULE_SET_ID } from '@/data/tax'
 
 export const DEFAULT_INPUT: CalculatorInput = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   basic: {
     currentAge: 35,
     retirementAge: 55,
@@ -59,6 +59,12 @@ export const DEFAULT_INPUT: CalculatorInput = {
       inflationIndexed: false, // 사적연금은 보통 비연동
     },
     healthInsurance: { mode: 'rateApprox' },
+  },
+  debt: {
+    principal: 0, // 부채 없음이 기본 — 있으면 사용자가 입력한다
+    annualRate: 0.042, // 주택담보대출 금리 근사. principal 이 0 이면 계산에 쓰이지 않는다
+    monthlyPayment: 0,
+    investFreedPayment: true,
   },
   events: [],
   options: {

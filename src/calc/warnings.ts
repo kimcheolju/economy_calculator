@@ -56,6 +56,38 @@ export function buildWarnings(
     })
   }
 
+  // ── 부채 ──────────────────────────────────────────────────
+  if (input.debt.principal > 0) {
+    const debt = accumulation.debt
+
+    if (debt.neverPaysOff) {
+      out.push({
+        code: 'DEBT_NEVER_PAYS_OFF',
+        severity: 'warn',
+        message: `월 상환액이 월 이자(${manwon((input.debt.principal * input.debt.annualRate) / 12)})보다 적어 원금이 줄지 않습니다. 잔액이 오히려 늘어납니다.`,
+        relatedField: 'debt.monthlyPayment',
+      })
+    }
+
+    if (debt.balanceAtRetirement > 0) {
+      out.push({
+        code: 'DEBT_AT_RETIREMENT',
+        severity: 'warn',
+        message: `은퇴(${basic.retirementAge}세) 시점에 부채 ${manwon(debt.balanceAtRetirement)}이 남습니다. 은퇴 자산에서 상환하는 것으로 계산했으며, 이때 매도 차익·연금 인출에 세금이 붙습니다.`,
+      })
+    }
+
+    // 대출 상환은 세금 없는 확정 수익이므로 보수 차감 후 명목수익률과 비교한다
+    const netReturn = normalized.totalReturn * (1 - returns.ter)
+    if (input.debt.annualRate > netReturn) {
+      out.push({
+        code: 'DEBT_RATE_EXCEEDS_RETURN',
+        severity: 'info',
+        message: `대출 금리 ${(input.debt.annualRate * 100).toFixed(1)}%가 기대수익률 ${(netReturn * 100).toFixed(1)}%보다 높습니다. 투자보다 상환이 유리할 수 있습니다(상환은 세금 없는 확정 수익입니다).`,
+      })
+    }
+  }
+
   // ── 금융소득종합과세 ───────────────────────────────────────
   const threshold = rules.comprehensiveIncomeThreshold.value.amount
   const lastSnapshot = accumulation.snapshots[accumulation.snapshots.length - 1]

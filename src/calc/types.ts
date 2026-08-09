@@ -7,6 +7,10 @@
 
 // ─── 열거형 ────────────────────────────────────────────────────────
 
+import type { DebtResult } from './debt'
+
+export type { DebtResult }
+
 export type AccountType = 'taxable' | 'isa' | 'pensionSavings' | 'irp' | 'dcRetirement'
 
 export const ACCOUNT_TYPES: readonly AccountType[] = [
@@ -132,6 +136,24 @@ export interface RetirementPlan {
   }
 }
 
+/**
+ * 부채 (design/02-calculation-engine.md §12)
+ *
+ * 원리금균등상환 한 건만 다룬다. 여러 건이 있으면 합산해 입력한다 —
+ * 대출별 금리 차이까지 모델링하면 입력 부담이 커지고, 은퇴 계획의 정확도에
+ * 기여하는 바는 작다.
+ */
+export interface DebtPlan {
+  /** 남은 원금 (오늘 기준 명목). 0 이면 부채 없음 */
+  principal: number
+  /** 연 이자율 (소수). 월이율은 이 값을 12로 나눈다 — 대출 상환 관행 */
+  annualRate: number
+  /** 매달 갚는 원리금 합계 */
+  monthlyPayment: number
+  /** 상환이 끝난 뒤 그 금액을 투자에 보탤지 */
+  investFreedPayment: boolean
+}
+
 export interface CashflowEvent {
   id: string
   label: string
@@ -150,11 +172,12 @@ export interface SimulationOptions {
 }
 
 export interface CalculatorInput {
-  schemaVersion: 1
+  schemaVersion: 2
   basic: BasicInfo
   returns: ReturnAssumptions
   accounts: AccountPlan
   retirement: RetirementPlan
+  debt: DebtPlan
   events: CashflowEvent[]
   options: SimulationOptions
 }
@@ -207,6 +230,25 @@ export interface AccumulationResult {
   readonly totalDividendCashOut: number
   readonly finalAccounts: Readonly<Record<AccountType, AccountState>>
   readonly milestones: readonly Milestone[]
+  /** 축적기 동안의 부채 상환 결과 */
+  readonly debt: DebtResult
+}
+
+/**
+ * 은퇴 시점의 부채 정산.
+ * 남은 빚은 은퇴 자산에서 갚는 것으로 처리한다 (design/02 §12).
+ */
+export interface DebtSettlement {
+  /** 은퇴 시점 잔여 부채 (명목) */
+  readonly balanceAtRetirement: number
+  /** 실제로 상환한 금액 */
+  readonly paid: number
+  /** 상환하려고 자산을 인출하면서 낸 세금 */
+  readonly tax: number
+  /** 자산이 모자라 갚지 못한 금액 */
+  readonly shortfall: number
+  /** 부채 정산 후 은퇴 자산 */
+  readonly netBalance: Money
 }
 
 export interface YearlyWithdrawalRow {
@@ -286,6 +328,7 @@ export interface CalculationResult {
   readonly input: CalculatorInput
   readonly normalizedReturns: NormalizedReturns
   readonly accumulation: AccumulationResult
+  readonly debtSettlement: DebtSettlement
   readonly withdrawal: WithdrawalResult
   readonly fire: FireResult
   readonly assumptions: readonly Assumption[]

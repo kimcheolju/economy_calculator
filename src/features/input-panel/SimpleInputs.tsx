@@ -11,10 +11,11 @@ import { ACCOUNT_LABELS, ACCOUNT_TYPES, type AccountType } from '@/calc/types'
 import { normalizeReturns } from '@/calc/rates'
 import { NumberInput } from '@/components/inputs/Controls'
 import { MoneyInput } from '@/components/inputs/MoneyInput'
-import { Button, Callout } from '@/components/display/Primitives'
+import { Button, Callout, Disclosure } from '@/components/display/Primitives'
 import { MONEY_PRESETS, SAVINGS_PRESETS } from '@/lib/defaults'
 import { formatKRW, formatPercent } from '@/lib/format'
 import { describeErrors } from '@/lib/schema'
+import { DebtFields } from './DebtFields'
 import { useCalculatorStore } from '@/store/calculator'
 
 type Balances = Record<AccountType, number>
@@ -66,7 +67,7 @@ export function SimpleInputs({ onSwitchToDetailed }: { onSwitchToDetailed: () =>
 
   // 이미 세제 혜택 계좌에 잔액이 있으면 접어두지 않는다 — 접힌 채로 두면
   // 전액 일반계좌로 계산된 줄 모르고 세금이 과다 계산된 결과를 보게 된다.
-  const [splitOpen, setSplitOpen] = useState(
+  const [splitInitiallyOpen] = useState(
     () => sumBalances(input.accounts.initialBalances) - input.accounts.initialBalances.taxable > 0,
   )
 
@@ -113,31 +114,26 @@ export function SimpleInputs({ onSwitchToDetailed }: { onSwitchToDetailed: () =>
           연금저축·ISA에 이미 목돈이 있는 사용자는 세금이 과다 계산되므로,
           간단 모드를 벗어나지 않고도 나눌 수 있는 경로를 여기서 제공한다.
         */}
-        <details
-          open={splitOpen}
-          onToggle={(e) => setSplitOpen(e.currentTarget.open)}
-          className="rounded-control border border-rule px-2.5 py-2"
-        >
-          <summary className="cursor-pointer text-caption font-medium text-ink-secondary transition-colors hover:text-ink">
-            계좌별로 나눠 입력하기
-          </summary>
-          <div className="mt-3 space-y-3">
-            <p className="text-micro text-ink-muted">
-              나누지 않으면 전액 일반계좌로 계산합니다. 연금저축·ISA에 이미 돈이 있다면 여기서
-              옮겨주세요 — 세금이 실제보다 많이 잡혀 결과가 낮게 나옵니다.
-            </p>
-            {ACCOUNT_TYPES.map((account) => (
-              <MoneyInput
-                key={account}
-                id={`simple-initial-${account}`}
-                label={ACCOUNT_LABELS[account]}
-                value={input.accounts.initialBalances[account]}
-                onChange={(value) => patch({ accounts: { initialBalances: { [account]: value } } })}
-              />
-            ))}
-            <p className="text-micro text-ink-muted numeric">합계 {formatKRW(totalSavings)}</p>
-          </div>
-        </details>
+        <Disclosure title="계좌별로 나눠 입력하기" defaultOpen={splitInitiallyOpen}>
+          <p className="text-micro text-ink-muted">
+            나누지 않으면 전액 일반계좌로 계산합니다. 연금저축·ISA에 이미 돈이 있다면 여기서
+            옮겨주세요 — 세금이 실제보다 많이 잡혀 결과가 낮게 나옵니다.
+          </p>
+          {ACCOUNT_TYPES.map((account) => (
+            <MoneyInput
+              key={account}
+              id={`simple-initial-${account}`}
+              label={ACCOUNT_LABELS[account]}
+              value={input.accounts.initialBalances[account]}
+              onChange={(value) => patch({ accounts: { initialBalances: { [account]: value } } })}
+            />
+          ))}
+          <p className="text-micro text-ink-muted numeric">합계 {formatKRW(totalSavings)}</p>
+        </Disclosure>
+
+        <Disclosure title="빚이 있나요?" defaultOpen={input.debt.principal > 0}>
+          <DebtFields idPrefix="simple" />
+        </Disclosure>
 
         <MoneyInput
           id="simple-monthlyContribution"

@@ -111,6 +111,43 @@ export function Section({ title, badge, defaultOpen = false, children }: Section
   )
 }
 
+/**
+ * 인라인 접이식 (섹션 안에서 부가 입력을 감출 때).
+ *
+ * `<details open={state}>` 를 쓰지 않는다 — React 가 open 을 제어 속성으로 다루는데
+ * `toggle` 이벤트는 버블링하지 않아 onToggle 이 어긋나고, 다음 렌더에서 열린 상태가
+ * 되돌려진다(실측: 클릭해도 열리지 않음). Section 과 같은 조건부 렌더 방식이 안전하다.
+ */
+export function Disclosure({
+  title,
+  defaultOpen = false,
+  children,
+}: {
+  title: string
+  defaultOpen?: boolean
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="rounded-control border border-rule">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-1.5 px-2.5 py-2 text-left"
+      >
+        <ChevronDown
+          className={`size-3.5 shrink-0 text-ink-muted transition-transform duration-150 ${
+            open ? '' : '-rotate-90'
+          }`}
+        />
+        <span className="flex-1 text-caption font-medium text-ink-secondary">{title}</span>
+      </button>
+      {open && <div className="space-y-3 border-t border-rule px-2.5 py-3">{children}</div>}
+    </div>
+  )
+}
+
 // ─── 지표 ─────────────────────────────────────────────────────────
 
 /**

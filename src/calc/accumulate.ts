@@ -22,6 +22,7 @@ import {
   taxCreditForYear,
   type Allocation,
 } from './allocate'
+import { simulateDebt } from './debt'
 import { createYearTaxState, drawFromAccounts, emptyAccountState, totalBalance } from './draw'
 import {
   ACCOUNT_TYPES,
@@ -81,6 +82,13 @@ export function accumulate(
 
   const accounts = initAccounts(input)
   const limits = createLimitState()
+
+  /*
+   * 부채는 축적기와 나란히 흐른다.
+   * "매달 투자할 돈"은 상환액을 이미 뺀 실투자 가능액이므로 여기서 다시 빼지 않는다.
+   * 다만 상환이 끝나면 그만큼이 굳으므로, 사용자가 켜둔 경우 납입액에 가산한다.
+   */
+  const debt = simulateDebt(input.debt, basic.currentAge, basic.retirementAge, basic.endAge)
 
   const snapshots: YearSnapshot[] = []
   let totalPrincipal = 0
@@ -148,7 +156,9 @@ export function accumulate(
 
     // ── 연간 납입액 배분 ────────────────────────────────────────
     resetAnnualLimits(limits)
-    const annualContribution = monthlyContribution * 12 + (plan.reinvestTaxCredit ? pendingTaxCredit : 0)
+    const freed = input.debt.investFreedPayment ? (debt.freedAnnual[yearIndex] ?? 0) : 0
+    const annualContribution =
+      monthlyContribution * 12 + (plan.reinvestTaxCredit ? pendingTaxCredit : 0) + freed
     pendingTaxCredit = 0
 
     const { allocation, deducted } = allocateYear(annualContribution, plan, rules, limits)
@@ -273,6 +283,7 @@ export function accumulate(
     totalDividendCashOut,
     finalAccounts: accounts,
     milestones,
+    debt,
   }
 }
 
